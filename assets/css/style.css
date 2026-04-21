@@ -75,6 +75,12 @@ body {
 }
 .nav-links a:hover { color: var(--primary-color); }
 
+.nav-actions {
+    display: flex;
+    align-items: center;
+    /* Tăng khoảng cách giữa Search, Cart và Button (ví dụ: 25px) */
+    gap: 25px; 
+}
 .nav-actions .icon-btn { 
     background: none; 
     border: none; 
@@ -264,3 +270,5 @@ body {
     font-size: 24px; border: none; cursor: pointer;
     box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
 }
+
+
