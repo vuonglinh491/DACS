@@ -6,21 +6,24 @@
     <title>LK Secure - Đăng nhập</title>
     
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="icon" type="image/png" href="../assets/imgs/logo.png">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <div style="background-image: url('assets/imgs/backgroud.png'); ">
+    </div>
 
     <header class="navbar">
         <a href="home.php" class="nav-logo">
             <i class="fa-solid fa-shield-halved"></i> LK Secure
         </a>
         <nav class="nav-links">
-            <a href="home.php">Trang chủ</a>
-            <a href="#">Sản phẩm</a>
-            <a href="#">Giới thiệu</a>
-            <a href="#">Liên hệ</a>
+            <a href="home.php">TRANG CHỦ</a>
+            <a href="#">SẢN PHẨM</a>
+            <a href="#">GIỚI THIỆU</a>
+            <a href="#">LIÊN HỆ</a>
         </nav>
         <div class="nav-actions">
             <button class="icon-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
@@ -87,3 +90,31 @@
     </script>
 </body>
 </html>
+<script>
+const validateEmail = (email) => {
+    return String(email).toLowerCase().match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
+};
+
+document.querySelectorAll('.form-control').forEach(input => {
+    input.addEventListener('input', function() {
+        const wrapper = this.parentElement;
+        let isValid = false;
+
+        if (this.type === 'email') {
+            isValid = validateEmail(this.value);
+        } else if (this.type === 'password' || this.type === 'text') {
+            isValid = this.value.length >= 6; // Ví dụ login chỉ cần >= 6 ký tự
+        }
+
+        if (isValid) {
+            wrapper.classList.add('success');
+            wrapper.classList.remove('error');
+        } else {
+            wrapper.classList.add('error');
+            wrapper.classList.remove('success');
+        }
+        
+        if(this.value === "") wrapper.classList.remove('success', 'error');
+    });
+});
+</script>
