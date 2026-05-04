@@ -31,19 +31,28 @@
         </div>
     </nav>
 
-    <header class="hero">
-        <div class="hero-content">
-            <h1>Bảo Vệ An Toàn <br><span>Ngôi Nhà Của Bạn</span></h1>
-            <p>Khám phá bộ sưu tập thiết bị an ninh LKSecure hiện đại, đảm bảo an toàn tuyệt đối cho gia đình bạn.</p>
-            <div class="hero-btns">
-                <button class="btn-submit" style="width: auto; padding: 12px 30px;">Khám Phá Sản Phẩm</button>
-                <button class="btn-social" style="background: transparent; color: white; border: 1px solid white;">Tư Vấn Miễn Phí</button>
-            </div>
-        </div>
-        <div class="hero-image">
-            <img src="../assets/imgs/home1.png" alt="Camera">
-        </div>
-    </header>
+   <header class="hero">
+    <div class="hero-content">
+        <h1>
+            Bảo Vệ An Toàn <br>
+            <span>Ngôi Nhà Của Bạn</span>
+        </h1>
+
+        <p>
+            Khám phá bộ sưu tập thiết bị an ninh LKSecure hiện đại,
+            đảm bảo an toàn tuyệt đối cho gia đình bạn.
+        </p>
+
+     <div class="hero-btns">
+    <a href="products.php" class="btn-submit">Khám Phá Sản Phẩm</a>
+    <a href="#" class="btn-submit">Tư Vấn Miễn Phí</a>
+</div>
+    </div>
+
+    <div class="hero-image">
+        <img src="../assets/imgs/home1.png" alt="">
+    </div>
+</header>
 
     <section class="services-grid">
         <div class="service-card">
@@ -92,43 +101,42 @@
     </section>
 
     <footer class="main-footer">
-        <div class="footer-grid">
-            <div class="footer-col">
-                <div class="nav-logo" style="margin-bottom: 30px;">
-                    <i class="fas fa-shield-halved"></i>
-                    <span>LKSecure</span>
-                </div>
-                <p>An tâm cho mọi gia đình Việt với giải pháp an ninh toàn diện.</p>
-            </div>
-            <div class="footer-col">
-                <h2>Liên kết</h2>
-                <ul>
-                    <li><a href="home.php">TRANG CHỦ</a></li>
-                    <li><a href="products.php">SẢN PHẨM</a></li>
-                    <li><a href="#">LIÊN HỆ</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h2>Hỗ trợ</h2>
-                <ul>
-                    <li><a href="#">Bảo hành</a></li>
-                    <li><a href="#">Chính sách bảo mật</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h3>Thông tin liên hệ</h3>
-                <p><i class="fas fa-phone" style="margin-right: 10px;"></i> 0123 456 789</p>
-                <p><i class="fas fa-envelope" style="margin-right: 10px;"></i> info@lksecure.vn</p>
-            </div>
-        </div>
-        <div style="text-align: center; padding-top: 40px; font-size: 13px;">
-            <p>&copy; 2026 LKSecure. Tất cả quyền được bảo lưu.</p>
-        </div>
-    </footer>
+    <div class="footer-grid">
 
-    <button class="fab-chat">
-        <i class="fas fa-comment-dots"></i>
-    </button>
+        <div class="footer-col">
+            <h4>LKSecure</h4>
+            <p>Giải pháp an ninh thông minh cho mọi gia đình Việt.</p>
+        </div>
+
+        <div class="footer-col">
+            <h4>Liên kết</h4>
+            <ul>
+                <li><a href="#">Trang chủ</a></li>
+                <li><a href="#">Sản phẩm</a></li>
+                <li><a href="#">Liên hệ</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h4>Hỗ trợ</h4>
+            <ul>
+                <li><a href="#">Bảo hành</a></li>
+                <li><a href="#">Chính sách</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h4>Liên hệ</h4>
+            <p>0123 456 789</p>
+            <p>info@lksecure.vn</p>
+        </div>
+
+    </div>
+
+    <div class="footer-bottom">
+        © 2026 LKSecure
+    </div>
+</footer>
 
 </body>
 </html>
