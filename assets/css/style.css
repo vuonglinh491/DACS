@@ -270,5 +270,14 @@ body {
     font-size: 24px; border: none; cursor: pointer;
     box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
 }
-
-
+#navSearchInput {
+    width: 0;
+    opacity: 0;
+    transition: all 0.4s ease;
+    /* các thuộc tính khác... */
+}
+#navSearchInput.active {
+    width: 200px;
+    opacity: 1;
+    padding: 8px 15px;
+}

@@ -87,6 +87,7 @@
             this.classList.toggle('fa-eye');
             this.classList.toggle('fa-eye-slash');
         });
+        <script src="../assets/js/script.js"></script>
     </script>
 </body>
 </html>
