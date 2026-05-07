@@ -7,11 +7,11 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/style_home.css">
+    
+    <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="icon" type="image/png" href="../assets/imgs/logo.png">
 </head>
-<body>
+<body class="page-home">
 
     <nav class="navbar">
         <div class="nav-logo">
@@ -21,11 +21,11 @@
         <div class="nav-links">
             <a href="home.php">Trang chủ</a>
             <a href="products.php">Sản phẩm</a>
-            <a href="#">Giới thiệu</a>
-            <a href="#">Liên hệ</a>
+            <a href="about.php">Giới thiệu</a>
+            <a href="contact.php">Liên hệ</a>
         </div>
         <div class="nav-actions">
-            <button class="icon-btn"><i class="fas fa-search"></i></button>
+            <div class="search-box-dynamic"><button class="icon-btn" id="searchToggle"><i class="fas fa-search"></i></button><input type="text" id="navSearchInput" placeholder="Tìm sản phẩm..."></div>
             <button class="icon-btn"><i class="fas fa-shopping-cart"></i></button>
             <a href="login.php" class="btn-login-nav">Đăng nhập</a>
         </div>
@@ -111,24 +111,25 @@
         <div class="footer-col">
             <h4>Liên kết</h4>
             <ul>
-                <li><a href="#">Trang chủ</a></li>
+                <li><a href="home.php">Trang chủ</a></li>
                 <li><a href="products.php">Sản phẩm</a></li>
-                <li><a href="#">Liên hệ</a></li>
+                <li><a href="about.php">Giới thiệu</a></li>
+                <li><a href="contact.php">Liên hệ</a></li>
             </ul>
         </div>
 
         <div class="footer-col">
             <h4>Hỗ trợ</h4>
-            <ul>
-                <li><a href="#">Bảo hành</a></li>
-                <li><a href="#">Chính sách</a></li>
+             <ul>
+                    <li><a href="warranty.php">Bảo hành</a></li>
+                    <li><a href="policy.php">Chính sách</a></li>
             </ul>
         </div>
 
         <div class="footer-col">
             <h4>Liên hệ</h4>
-            <p>0123 456 789</p>
-            <p>info@lksecure.vn</p>
+            <p>0393 860 031</p>
+            <p>ngo91168@gmail.com</p>
         </div>
 
     </div>
@@ -137,6 +138,7 @@
         © 2026 LKSecure
     </div>
 </footer>
-<script src="../assets/js/script.js"></script>
+
+<script src="../assets/js/main.js"></script>
 </body>
 </html>
