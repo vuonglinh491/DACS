@@ -1,3 +1,15 @@
+<?php
+session_start();
+if (isset($_SESSION['user_id'])) { header("Location: home.php"); exit; }
+$errors = [
+    'empty'    => 'Vui lòng nhập đầy đủ email và mật khẩu.',
+    'mismatch' => 'Mật khẩu xác nhận không khớp.',
+    'weakpass' => 'Mật khẩu phải có ít nhất 6 ký tự.',
+    'exists'   => 'Email này đã được đăng ký.',
+    'dbfail'   => 'Lỗi hệ thống, vui lòng thử lại.',
+];
+$error_msg = $errors[$_GET['error'] ?? ''] ?? '';
+?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -46,6 +58,12 @@
         <div class="login-card">
             <form action="../actions/register_action.php" method="POST" id="registerForm">
 
+                <?php if ($error_msg): ?>
+                <div style="background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px;">
+                    <i class="fas fa-exclamation-circle" style="margin-right:6px;"></i><?= htmlspecialchars($error_msg) ?>
+                </div>
+                <?php endif; ?>
+
                 <div class="form-group">
                     <label>Email <span class="text-red">*</span></label>
                     <div class="input-wrapper">
@@ -59,7 +77,7 @@
                     <label>Họ và tên <span class="text-red">*</span></label>
                     <div class="input-wrapper">
                         <i class="fa-regular fa-user left-icon"></i>
-                        <input type="text" name="fullname" class="form-control"
+                        <input type="text" name="full_name" class="form-control"
                                placeholder="Nhập họ và tên" required>
                     </div>
                 </div>

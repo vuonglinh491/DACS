@@ -1,3 +1,18 @@
+<?php
+session_start();
+// Nếu đã đăng nhập thì chuyển thẳng về home
+if (isset($_SESSION['user_id'])) {
+    header("Location: home.php"); exit;
+}
+// Bản đồ mã lỗi
+$errors = [
+    'empty'     => 'Vui lòng nhập email và mật khẩu.',
+    'notfound'  => 'Không tìm thấy tài khoản với email này.',
+    'wrongpass' => 'Mật khẩu không chính xác.',
+];
+$error_msg   = $errors[$_GET['error'] ?? ''] ?? '';
+$success_msg = ($_GET['success'] ?? '') === 'registered' ? 'Đăng ký thành công! Hãy đăng nhập.' : '';
+?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -45,6 +60,17 @@
 
         <div class="login-card">
             <form action="../actions/login_action.php" method="POST">
+
+                <?php if ($error_msg): ?>
+                <div style="background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px;">
+                    <i class="fas fa-exclamation-circle" style="margin-right:6px;"></i><?= htmlspecialchars($error_msg) ?>
+                </div>
+                <?php endif; ?>
+                <?php if ($success_msg): ?>
+                <div style="background:#f0fdf4;border:1px solid #86efac;color:#16a34a;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px;">
+                    <i class="fas fa-check-circle" style="margin-right:6px;"></i><?= htmlspecialchars($success_msg) ?>
+                </div>
+                <?php endif; ?>
 
                 <div class="form-group">
                     <label>Email</label>
