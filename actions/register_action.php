@@ -13,22 +13,32 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $full_name = trim($_POST['full_name'] ?? '');
 $email     = trim($_POST['email']     ?? '');
 $phone     = trim($_POST['phone']     ?? '');
-$password  = trim($_POST['password']  ?? '');
-$confirm   = trim($_POST['confirm_password'] ?? '');
+$password  = $_POST['password']       ?? '';
+$confirm   = $_POST['confirm_password'] ?? '';
 
-// Validate cơ bản
-if (!$email || !$password) {
+// --- Validate ---
+if (!$email || !$password || !$full_name) {
     header("Location: ../pages/register.php?error=empty");
     exit;
 }
 
-if ($password !== $confirm && $confirm !== '') {
-    header("Location: ../pages/register.php?error=mismatch");
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    header("Location: ../pages/register.php?error=invalidemail");
     exit;
 }
 
-if (strlen($password) < 6) {
+// Mật khẩu: ít nhất 8 ký tự, 1 hoa, 1 thường, 1 số
+if (strlen($password) < 8
+    || !preg_match('/[A-Z]/', $password)
+    || !preg_match('/[a-z]/', $password)
+    || !preg_match('/[0-9]/', $password)
+) {
     header("Location: ../pages/register.php?error=weakpass");
+    exit;
+}
+
+if ($confirm !== $password) {
+    header("Location: ../pages/register.php?error=mismatch");
     exit;
 }
 
@@ -37,7 +47,6 @@ $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
 $check->bind_param("s", $email);
 $check->execute();
 $check->store_result();
-
 if ($check->num_rows > 0) {
     $check->close();
     header("Location: ../pages/register.php?error=exists");
@@ -45,10 +54,9 @@ if ($check->num_rows > 0) {
 }
 $check->close();
 
-// Hash mật khẩu & lưu vào DB
+// Hash & lưu
 $hashed = password_hash($password, PASSWORD_DEFAULT);
-
-$stmt = $conn->prepare("INSERT INTO users (full_name, email, phone, password, role) VALUES (?, ?, ?, ?, 'customer')");
+$stmt   = $conn->prepare("INSERT INTO users (full_name, email, phone, password, role, is_active) VALUES (?, ?, ?, ?, 'customer', 1)");
 $stmt->bind_param("ssss", $full_name, $email, $phone, $hashed);
 
 if ($stmt->execute()) {

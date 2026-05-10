@@ -1,8 +1,8 @@
-<?php 
-$connect_path = $_SERVER['DOCUMENT_ROOT'] . '/DACS/config/connect.php';
-if (file_exists($connect_path)) {
-    include $connect_path;
-}
+<?php
+session_start();
+require_once __DIR__ . '/../config/database.php';
+// Truyền trạng thái đăng nhập ra JS
+$is_logged_in = isset($_SESSION['user_id']) ? 'true' : 'false';
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -31,8 +31,8 @@ if (file_exists($connect_path)) {
             <button class="icon-btn" id="searchToggle"><i class="fas fa-search"></i></button>
             <input type="text" id="navSearchInput" placeholder="Tìm sản phẩm...">
         </div>
-        <button class="icon-btn"><i class="fas fa-shopping-cart"></i></button>
-        <a href="login.php" class="btn-login-nav">Đăng nhập</a>
+        <button class="icon-btn cart-icon-btn" title="Giỏ hàng"><i class="fas fa-shopping-cart"></i><span class="cart-badge" style="display:none;"></span></button>
+        <?php include __DIR__ . '/../config/nav_partial.php'; ?>
     </div>
 </nav>
 
@@ -86,7 +86,7 @@ if (file_exists($connect_path)) {
                                 <img src="../assets/imgs/'.$row['image'].'">
                                 <h5>'.$row['name'].'</h5>
                                 <span class="price-tag">'.number_format($row['price']).'đ</span>
-                                <button class="add-cart-btn">Thêm vào giỏ</button>
+                                <button class="add-cart-btn" data-product-id="'.$row['id'].'" data-product-name="'.htmlspecialchars($row['name']).'">Thêm vào giỏ</button>
                             </div>';
                         }
                     } else {
@@ -134,6 +134,11 @@ if (file_exists($connect_path)) {
 </footer>
 
 
+<script>
+    // Biến trạng thái đăng nhập — được inject từ PHP
+    var USER_LOGGED_IN = <?= $is_logged_in ?>;
+    var LOGIN_URL = 'login.php';
+</script>
 <script src="../assets/js/main.js"></script>
 </body>
 </html>

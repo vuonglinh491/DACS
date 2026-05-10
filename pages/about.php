@@ -1,3 +1,6 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) session_start();
+?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -23,11 +26,11 @@
     </div>
     <div class="nav-actions">
         <div class="search-box-dynamic">
-            <button class="icon-btn" onclick="toggleSearch()"><i class="fas fa-search"></i></button>
+            <button class="icon-btn" id="searchToggle" title="Tìm kiếm"><i class="fas fa-search"></i></button>
             <input type="text" id="navSearchInput" placeholder="Tìm sản phẩm...">
         </div>
-        <button class="icon-btn"><i class="fas fa-shopping-cart"></i></button>
-        <a href="login.php" class="btn-login-nav">Đăng nhập</a>
+        <button class="icon-btn cart-icon-btn" title="Giỏ hàng"><i class="fas fa-shopping-cart"></i><span class="cart-badge" style="display:none;"></span></button>
+        <?php include __DIR__ . '/../config/nav_partial.php'; ?>
     </div>
 </nav>
 
@@ -279,5 +282,9 @@
 
 </html>
 <script src="../assets/js/main.js"></script>
+<script>
+    var USER_LOGGED_IN = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
+    var LOGIN_URL = 'login.php';
+</script>
 </body>
 </html>

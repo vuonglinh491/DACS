@@ -153,8 +153,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 let isValid = false;
                 if      (this.name === 'email')            isValid = validateEmailReg(val);
-                else if (this.name === 'fullname')         isValid = val.length >= 2;
-                else if (this.name === 'phone')            isValid = validatePhone(val);
+                else if (this.name === 'full_name')        isValid = val.length >= 2;
+                else if (this.name === 'phone')            isValid = val === '' || validatePhone(val);
                 else if (this.name === 'password') {
                     const r1 = updateReq(/.{8,}/,  val, '.req-8');
                     const r2 = updateReq(/[A-Z]/,  val, '.req-upper');
@@ -175,6 +175,12 @@ document.addEventListener('DOMContentLoaded', function () {
     /* ==========================================================
        8. CONTACT — CHON CHU DE + SUBMIT TOAST
     ========================================================== */
+    /* Global selectTopic for inline onclick usage */
+    window.selectTopic = function (el) {
+        document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+    };
+
     document.querySelectorAll('.topic-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
@@ -186,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (contactForm) {
         contactForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            const toast = document.getElementById('toast');
+            const toast = document.getElementById('contact-toast');
             if (toast) {
                 toast.classList.add('show');
                 setTimeout(() => toast.classList.remove('show'), 3500);
@@ -254,6 +260,46 @@ document.addEventListener('DOMContentLoaded', function () {
             this.classList.add('active');
             const panel = document.getElementById(target);
             if (panel) panel.classList.add('active');
+        });
+    });
+
+    /* ==========================================================
+       11. GIỎ HÀNG — KIỂM TRA ĐĂNG NHẬP TRƯỚC KHI THÊM
+       Nếu chưa đăng nhập → chuyển sang trang login, kèm redirect_to
+       Sau khi đăng nhập → tự quay về trang products
+    ========================================================== */
+    document.querySelectorAll('.add-cart-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            // USER_LOGGED_IN được inject từ PHP qua <script> trong products.php
+            var isLoggedIn = (typeof USER_LOGGED_IN !== 'undefined') ? USER_LOGGED_IN : false;
+
+            if (!isLoggedIn) {
+                // Lấy URL trang hiện tại để redirect về sau khi đăng nhập
+                var currentPage = window.location.pathname.split('/').pop() || 'products.php';
+                var loginUrl = (typeof LOGIN_URL !== 'undefined' ? LOGIN_URL : 'login.php');
+                window.location.href = loginUrl + '?redirect_to=' + encodeURIComponent(currentPage);
+                return;
+            }
+
+            // Đã đăng nhập — xử lý thêm giỏ hàng
+            var productId   = this.dataset.productId;
+            var productName = this.dataset.productName || 'Sản phẩm';
+            var originalText = this.textContent;
+
+            this.textContent = '✓ Đã thêm!';
+            this.disabled = true;
+            this.style.background = '#16a34a';
+
+            setTimeout(function () {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                btn.style.background = '';
+            }, 1800);
+
+            console.log('Thêm vào giỏ — productId:', productId, '| name:', productName);
+            // TODO: Gọi API/action thêm sản phẩm vào giỏ hàng thực tế ở đây
         });
     });
 
