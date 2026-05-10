@@ -7,11 +7,8 @@ require_once __DIR__ . '/../config/database.php';
 header('Content-Type: application/json; charset=utf-8');
 
 // Chỉ admin mới được phép
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
-//     http_response_code(403);
-//     echo json_encode(['success' => false, 'message' => 'Không có quyền truy cập.']);
-//     exit;
-// }
+require_once __DIR__ . '/../config/auth_check.php';
+requireAdmin(true); // true = trả JSON thay vì redirect
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 

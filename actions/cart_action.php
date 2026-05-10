@@ -4,6 +4,7 @@
 // ============================================================
 session_start();
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/auth_check.php';
 header('Content-Type: application/json; charset=utf-8');
 
 if (!isset($_SESSION['user_id'])) {
@@ -141,24 +142,54 @@ if ($action === 'checkout' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $total      = array_sum(array_map(fn($i) => $i['price'] * $i['quantity'], $cartItems));
     $order_code = 'LK' . date('ymd') . strtoupper(substr(uniqid(), -5));
 
+    // Phương thức thanh toán
+    $payment_method = trim($_POST['payment_method'] ?? 'cod');
+    if (!in_array($payment_method, ['cod','bank_transfer','momo','vnpay'])) $payment_method = 'cod';
+
+    $shipping_fee = 0;
+    $discount     = 0;
+
     $conn->begin_transaction();
     try {
+        // Dùng đúng tên cột theo schema DB: ship_address, subtotal, discount, shipping_fee, total, payment_method, payment_status, STATUS
         $stmt = $conn->prepare(
-            "INSERT INTO orders (user_id, order_code, total, status, address, note) VALUES (?, ?, ?, 'pending', ?, ?)"
+            "INSERT INTO orders
+                (user_id, order_code, ship_address, note,
+                 subtotal, discount, shipping_fee, total,
+                 payment_method, payment_status, STATUS, ordered_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'pending', NOW())"
         );
-        $stmt->bind_param("isiss", $user_id, $order_code, $total, $address, $note);
+        $stmt->bind_param(
+            "isssddddds",
+            $user_id, $order_code, $address, $note,
+            $total, $discount, $shipping_fee, $total,
+            $payment_method
+        );
         $stmt->execute();
         $order_id = $conn->insert_id;
         $stmt->close();
 
+        // order_items: product_name, product_image, unit_price, quantity, line_total
         $stmtItem = $conn->prepare(
-            "INSERT INTO order_items (order_id, product_id, product_name, product_img, price, quantity) VALUES (?,?,?,?,?,?)"
+            "INSERT INTO order_items
+                (order_id, product_id, product_name, product_image, unit_price, quantity, line_total)
+             VALUES (?,?,?,?,?,?,?)"
         );
         foreach ($cartItems as $item) {
-            $stmtItem->bind_param("iissii", $order_id, $item['product_id'], $item['name'], $item['image'], $item['price'], $item['quantity']);
+            $line_total = $item['price'] * $item['quantity'];
+            $stmtItem->bind_param(
+                "iissdid",
+                $order_id, $item['product_id'], $item['name'], $item['image'],
+                $item['price'], $item['quantity'], $line_total
+            );
             $stmtItem->execute();
         }
         $stmtItem->close();
+
+        // Trừ stock
+        foreach ($cartItems as $item) {
+            $conn->query("UPDATE products SET stock = GREATEST(0, stock - {$item['quantity']}) WHERE id = {$item['product_id']}");
+        }
 
         $conn->query("DELETE FROM cart WHERE user_id=$user_id");
         $conn->commit();

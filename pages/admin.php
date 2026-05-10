@@ -1,10 +1,7 @@
 <?php
-session_start();
 require_once __DIR__ . '/../config/database.php';
-// Bỏ comment bên dưới khi muốn bảo vệ trang admin thật sự:
-// if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
-//     header('Location: login.php'); exit;
-// }
+require_once __DIR__ . '/../config/auth_check.php';
+requireAdmin(); // Redirect về login nếu không phải admin
 ?>
 <!DOCTYPE html>
 <html lang="vi">

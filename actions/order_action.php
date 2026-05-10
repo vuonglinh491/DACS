@@ -6,12 +6,10 @@
 // ============================================================
 session_start();
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/auth_check.php';
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập.']);
-    exit;
-}
+requireLogin(true); // JSON mode
 
 $action  = $_POST['action'] ?? $_GET['action'] ?? '';
 $user_id = (int)$_SESSION['user_id'];

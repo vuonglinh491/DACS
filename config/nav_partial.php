@@ -5,6 +5,7 @@
 //  Tự phục hồi session từ cookie "Ghi nhớ đăng nhập"
 // ============================================================
 if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/auth_check.php'; // Session timeout check
 
 // Khôi phục từ cookie
 if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_user_id'])) {
@@ -104,9 +105,9 @@ if ($_auth_avatar) {
             <div class="nav-dropdown-divider"></div>
             <?php endif; ?>
 
-            <a href="#" class="nav-dropdown-item" id="ddBtnProfile">
+            <a href="profile.php" class="nav-dropdown-item">
                 <i class="fas fa-user-circle"></i>
-                <span>Thông tin cá nhân</span>
+                <span>Tài khoản của tôi</span>
             </a>
             <a href="#" class="nav-dropdown-item" id="ddBtnAddress">
                 <i class="fas fa-location-dot"></i>
