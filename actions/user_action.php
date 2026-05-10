@@ -9,7 +9,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 requireLogin(true);
 
-$action  = $_POST['action'] ?? $_GET['action'] ?? '';
+$action  = $_POST['action'] ?? $_GET['action'] ?? ''; // Đọc POST trước, GET sau
 $user_id = (int)$_SESSION['user_id'];
 
 // ── LẤY THÔNG TIN ─────────────────────────────────────────
@@ -23,7 +23,7 @@ if ($action === 'get') {
     $addresses = [];
     $tableCheck = $conn->query("SHOW TABLES LIKE 'user_addresses'");
     if ($tableCheck && $tableCheck->num_rows > 0) {
-        $addrStmt = $conn->prepare("SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, id ASC");
+        $addrStmt = $conn->prepare("SELECT id, user_id, address, province, district, ward, recipient_name, recipient_phone, is_default, created_at FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, id ASC");
         $addrStmt->bind_param("i", $user_id);
         $addrStmt->execute();
         $addrResult = $addrStmt->get_result();

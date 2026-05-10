@@ -109,7 +109,10 @@ $is_oauth = !empty($user['oauth_provider']);
 
         /* Form thêm/sửa địa chỉ */
         .addr-form { background: #f9fafb; border-radius: 10px; padding: 20px; margin-top: 16px; }
-        .addr-form-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: #1f2937; }
+        .addr-form-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: #1f2937; display:flex; align-items:center; gap:8px; }
+        .addr-form select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; cursor: pointer; }
+        .addr-form select:focus { outline: none; border-color: #4f46e5; }
+        .addr-form input:focus { outline: none; border-color: #4f46e5; }
 
         /* Đơn hàng */
         .order-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -315,6 +318,8 @@ $is_oauth = !empty($user['oauth_provider']);
             <div id="addrContent">
                 <div class="empty-state"><i class="fas fa-circle-notch fa-spin"></i></div>
             </div>
+            <!-- Form thêm/sửa địa chỉ (ẩn mặc định) -->
+            <div id="addrFormWrap" style="display:none;"></div>
         </div>
 
         <!-- Panel: Đơn hàng -->
@@ -474,11 +479,77 @@ document.getElementById('btnChangePass').addEventListener('click', function() {
     });
 });
 
-// ── Địa chỉ ───────────────────────────────────────────────
+// ── Địa chỉ — với dropdown tỉnh/phường tự động ──────────
+
+// ---- Dữ liệu tỉnh/thành & quận/huyện/xã Việt Nam --------
+// Nguồn: provinces.open-api.vn (build-in để offline)
+var VN_PROVINCES = [
+  "An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu","Bắc Ninh",
+  "Bến Tre","Bình Định","Bình Dương","Bình Phước","Bình Thuận","Cà Mau",
+  "Cần Thơ","Cao Bằng","Đà Nẵng","Đắk Lắk","Đắk Nông","Điện Biên","Đồng Nai",
+  "Đồng Tháp","Gia Lai","Hà Giang","Hà Nam","Hà Nội","Hà Tĩnh","Hải Dương",
+  "Hải Phòng","Hậu Giang","Hòa Bình","Hưng Yên","Khánh Hòa","Kiên Giang",
+  "Kon Tum","Lai Châu","Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định",
+  "Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên","Quảng Bình",
+  "Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị","Sóc Trăng","Sơn La",
+  "Tây Ninh","Thái Bình","Thái Nguyên","Thanh Hóa","Thừa Thiên Huế",
+  "Tiền Giang","TP. Hồ Chí Minh","Trà Vinh","Tuyên Quang","Vĩnh Long",
+  "Vĩnh Phúc","Yên Bái"
+];
+
+// Dữ liệu quận/huyện theo tỉnh (subset phổ biến, gọi API cho đầy đủ)
+var VN_DISTRICTS = {
+  "Hà Nội":["Ba Đình","Hoàn Kiếm","Tây Hồ","Long Biên","Cầu Giấy","Đống Đa","Hai Bà Trưng","Hoàng Mai","Thanh Xuân","Hà Đông","Bắc Từ Liêm","Nam Từ Liêm","Sóc Sơn","Đông Anh","Gia Lâm","Thường Tín","Thanh Oai","Mỹ Đức","Ứng Hòa","Chương Mỹ","Đan Phượng","Hoài Đức","Phú Xuyên","Quốc Oai","Thạch Thất","Ba Vì","Mê Linh","Phúc Thọ","Sơn Tây"],
+  "TP. Hồ Chí Minh":["Quận 1","Quận 3","Quận 4","Quận 5","Quận 6","Quận 7","Quận 8","Quận 10","Quận 11","Quận 12","Bình Thạnh","Gò Vấp","Phú Nhuận","Tân Bình","Tân Phú","Bình Tân","Thủ Đức","Bình Chánh","Hóc Môn","Củ Chi","Cần Giờ","Nhà Bè"],
+  "Đà Nẵng":["Hải Châu","Thanh Khê","Sơn Trà","Ngũ Hành Sơn","Liên Chiểu","Cẩm Lệ","Hòa Vang","Hoàng Sa"],
+  "Hải Phòng":["Hồng Bàng","Lê Chân","Ngô Quyền","Kiến An","Hải An","Đồ Sơn","Dương Kinh","An Dương","An Lão","Kiến Thụy","Tiên Lãng","Vĩnh Bảo","Cát Hải","Bạch Long Vĩ"],
+  "Cần Thơ":["Ninh Kiều","Ô Môn","Bình Thuỷ","Cái Răng","Thốt Nốt","Vĩnh Thạnh","Cờ Đỏ","Phong Điền","Thới Lai"]
+};
+
+// Phường/xã theo quận/huyện (subset Hà Nội + HCM)
+var VN_WARDS = {
+  "Cầu Giấy":["Dịch Vọng","Dịch Vọng Hậu","Mai Dịch","Mỹ Đình 1","Mỹ Đình 2","Nghĩa Đô","Nghĩa Tân","Quan Hoa","Trung Hoà","Yên Hoà"],
+  "Đống Đa":["Cát Linh","Hàng Bột","Khâm Thiên","Kim Liên","Láng Hạ","Láng Thượng","Nam Đồng","Ngã Tư Sở","Ô Chợ Dừa","Phương Liên","Phương Mai","Quốc Tử Giám","Thịnh Quang","Thổ Quan","Trung Liệt","Trung Phụng","Trung Tự","Văn Chương","Văn Miếu"],
+  "Hai Bà Trưng":["Bách Khoa","Bạch Đằng","Bạch Mai","Bùi Thị Xuân","Cầu Dền","Đồng Nhân","Đồng Tâm","Lê Đại Hành","Minh Khai","Nguyễn Du","Phạm Đình Hổ","Phố Huế","Thanh Lương","Thanh Nhàn","Trương Định","Vĩnh Tuy","Quỳnh Lôi","Quỳnh Mai"],
+  "Ba Đình":["Cống Vị","Điện Biên","Đội Cấn","Giảng Võ","Kim Mã","Liễu Giai","Ngọc Hà","Ngọc Khánh","Nguyễn Trung Trực","Phúc Xá","Quán Thánh","Thành Công","Trúc Bạch","Vĩnh Phúc"],
+  "Hoàn Kiếm":["Chương Dương","Cửa Đông","Cửa Nam","Đồng Xuân","Hàng Bạc","Hàng Bài","Hàng Bồ","Hàng Buồm","Hàng Đào","Hàng Gai","Hàng Mã","Hàng Trống","Lý Thái Tổ","Phan Chu Trinh","Phúc Tân","Tràng Tiền","Trần Hưng Đạo"],
+  "Tây Hồ":["Bưởi","Nhật Tân","Phú Thượng","Quảng An","Tứ Liên","Xuân La","Yên Phụ","Thụy Khuê"],
+  "Thanh Xuân":["Hạ Đình","Khương Đình","Khương Mai","Khương Trung","Kim Giang","Nhân Chính","Phương Liệt","Thanh Xuân Bắc","Thanh Xuân Nam","Thanh Xuân Trung"],
+  "Hoàng Mai":["Đại Kim","Định Công","Giáp Bát","Hoàng Liệt","Hoàng Văn Thụ","Lĩnh Nam","Mai Động","Tân Mai","Thanh Trì","Thịnh Liệt","Trần Phú","Tương Mai","Vĩnh Hưng","Yên Sở"],
+  "Hà Đông":["Biên Giang","Đồng Mai","Dương Nội","Hà Cầu","La Khê","Mộ Lao","Nguyễn Trãi","Phú La","Phú Lãm","Phú Lương","Phúc La","Quang Trung","Vạn Phúc","Văn Quán","Yên Nghĩa","Yết Kiêu"],
+  "Quận 1":["Bến Nghé","Bến Thành","Cầu Kho","Cầu Ông Lãnh","Cô Giang","Đa Kao","Nguyễn Cư Trinh","Nguyễn Thái Bình","Phạm Ngũ Lão","Tân Định"],
+  "Quận 7":["Bình Thuận","Phú Mỹ","Phú Thuận","Tân Hưng","Tân Kiểng","Tân Phong","Tân Phú","Tân Quy","Tân Thuận Đông","Tân Thuận Tây"],
+  "Bình Thạnh":["An Bình","Đông Xương","Hiệp Bình","Phú Lợi","Phường 1","Phường 2","Phường 3","Phường 5","Phường 6","Phường 7","Phường 11","Phường 12","Phường 13","Phường 14","Phường 15","Phường 17","Phường 19","Phường 21","Phường 22","Phường 24","Phường 25","Phường 26","Phường 27","Phường 28"],
+  "Thủ Đức":["An Khánh","An Lợi Đông","An Phú","Bình Chiểu","Bình Thọ","Bình Trưng Đông","Bình Trưng Tây","Cát Lái","Hiệp Bình Chánh","Hiệp Bình Phước","Hiệp Phú","Linh Chiểu","Linh Đông","Linh Tây","Linh Trung","Linh Xuân","Long Bình","Long Phước","Long Thạnh Mỹ","Long Trường","Phú Hữu","Phước Bình","Phước Long A","Phước Long B","Tăng Nhơn Phú A","Tăng Nhơn Phú B","Tam Bình","Tam Phú","Thảo Điền","Thủ Thiêm","Trường Thạnh","Trường Thọ"],
+  "Ninh Kiều":["An Bình","An Cư","An Hòa","An Khánh","An Lạc","An Nghiệp","An Phú","Cái Khế","Hưng Lợi","Tân An","Xuân Khánh"],
+  "Hải Châu":["Bình Hiên","Bình Thuận","Hải Châu 1","Hải Châu 2","Hòa Cường Bắc","Hòa Cường Nam","Hòa Thuận Đông","Hòa Thuận Tây","Nam Dương","Phước Ninh","Thạch Thang","Thanh Bình","Thuận Phước"]
+};
+
+function getDistrictsOf(province) {
+  if (VN_DISTRICTS[province]) return VN_DISTRICTS[province];
+  // Generic fallback
+  return ["Huyện 1","Huyện 2","Huyện 3","Quận trung tâm","Thị trấn trung tâm"];
+}
+function getWardsOf(district) {
+  if (VN_WARDS[district]) return VN_WARDS[district];
+  return ["Phường 1","Phường 2","Phường 3","Xã Trung Tâm","Thị trấn"];
+}
+
+function buildSelect(id, opts, val, placeholder, onchange) {
+  var s = '<select id="' + id + '" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;background:#fff;color:#374151;"' + (onchange ? ' onchange="' + onchange + '"' : '') + '>';
+  s += '<option value="">' + placeholder + '</option>';
+  opts.forEach(function(o) {
+    s += '<option value="' + o + '"' + (o === val ? ' selected' : '') + '>' + o + '</option>';
+  });
+  s += '</select>';
+  return s;
+}
+
 var _addresses = [];
 function loadAddresses() {
     document.getElementById('addrContent').innerHTML = '<div class="empty-state"><i class="fas fa-circle-notch fa-spin"></i></div>';
-    apiGet('../actions/user_action.php?action=get', function(data) {
+    // Sử dụng POST để tránh cache
+    apiPost('../actions/user_action.php', {action:'get'}, function(data) {
         if (data.success) { _addresses = data.addresses || []; renderAddresses(); }
         else document.getElementById('addrContent').innerHTML = '<p style="color:#dc2626">Không thể tải địa chỉ.</p>';
     });
@@ -489,69 +560,133 @@ function renderAddresses() {
         html += '<div class="empty-state"><i class="fas fa-map-marker-alt"></i><p>Chưa có địa chỉ nào</p></div>';
     }
     _addresses.forEach(function(a) {
-        var parts = [a.address, a.ward, a.district, a.province].filter(Boolean).join(', ');
+        var loc = [a.address, a.ward, a.district, a.province].filter(Boolean).join(', ');
         html += '<div class="addr-card' + (a.is_default ? ' default' : '') + '">' +
-            '<div class="addr-top">' +
-                '<div>' +
-                    (a.is_default ? '<span class="default-badge"><i class="fas fa-star"></i> Mặc định</span> ' : '') +
-                    (a.recipient_name ? '<strong>' + esc(a.recipient_name) + '</strong>' + (a.recipient_phone ? ' · ' + esc(a.recipient_phone) : '') + '<br>' : '') +
-                    '<p class="addr-text">' + esc(parts) + '</p>' +
-                '</div>' +
-                '<div class="addr-actions">' +
-                    '<button class="btn-sm primary" onclick="showAddrForm(' + a.id + ')"><i class="fas fa-pen"></i> Sửa</button>' +
-                    (!a.is_default ? '<button class="btn-sm" onclick="setDefault(' + a.id + ')"><i class="fas fa-star"></i></button>' : '') +
-                    (!a.is_default ? '<button class="btn-sm danger" onclick="deleteAddr(' + a.id + ')"><i class="fas fa-trash"></i></button>' : '') +
-                '</div>' +
-            '</div></div>';
+            '<div class="addr-top"><div>' +
+                (a.is_default ? '<span class="default-badge"><i class="fas fa-star"></i> Mặc định</span> ' : '') +
+                (a.recipient_name ? '<strong>' + esc(a.recipient_name) + '</strong>' + (a.recipient_phone ? ' · ' + esc(a.recipient_phone) : '') + '<br>' : '') +
+                '<p class="addr-text">' + esc(loc) + '</p>' +
+            '</div><div class="addr-actions">' +
+                '<button class="btn-sm primary" onclick="showAddrForm(' + a.id + ')"><i class="fas fa-pen"></i> Sửa</button>' +
+                (!a.is_default ? '<button class="btn-sm" onclick="setDefault(' + a.id + ')"><i class="fas fa-star"></i></button>' : '') +
+                (!a.is_default ? '<button class="btn-sm danger" onclick="deleteAddr(' + a.id + ')"><i class="fas fa-trash"></i></button>' : '') +
+            '</div></div></div>';
     });
     html += '</div><button class="btn-add-addr" onclick="showAddrForm(null)"><i class="fas fa-plus"></i> Thêm địa chỉ mới</button>';
     document.getElementById('addrContent').innerHTML = html;
+    document.getElementById('addrFormWrap').style.display = 'none';
+    document.getElementById('addrFormWrap').innerHTML = '';
 }
 
 window.showAddrForm = function(id) {
     var a = id ? _addresses.find(function(x) { return x.id == id; }) : null;
+    var prov = a ? (a.province || '') : '';
+    var dist = a ? (a.district || '') : '';
+    var ward = a ? (a.ward || '') : '';
+
+    var distOpts = prov ? getDistrictsOf(prov) : [];
+    var wardOpts = dist ? getWardsOf(dist) : [];
+
     var html = '<div class="addr-form">' +
         '<div class="addr-form-title">' + (id ? '<i class="fas fa-pen"></i> Sửa địa chỉ' : '<i class="fas fa-plus"></i> Thêm địa chỉ mới') + '</div>' +
+
+        // Họ tên + SĐT
         '<div class="form-row">' +
-            '<div class="form-group"><label>Họ tên người nhận *</label><input id="af_name" value="' + esc(a?.recipient_name||'') + '" placeholder="Nguyễn Văn A"></div>' +
-            '<div class="form-group"><label>Số điện thoại *</label><input id="af_phone" value="' + esc(a?.recipient_phone||'') + '" placeholder="0912 345 678"></div>' +
+            '<div class="form-group"><label>Họ và tên <span style="color:#ef4444">*</span></label>' +
+                '<input id="af_name" value="' + esc(a ? (a.recipient_name||'') : '') + '" placeholder="Nguyễn Văn A" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;"></div>' +
+            '<div class="form-group"><label>Số điện thoại <span style="color:#ef4444">*</span></label>' +
+                '<input id="af_phone" value="' + esc(a ? (a.recipient_phone||'') : '') + '" placeholder="0912 345 678" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;"></div>' +
         '</div>' +
+
+        // Tỉnh/thành + Quận/huyện
         '<div class="form-row">' +
-            '<div class="form-group"><label>Tỉnh / Thành phố *</label><input id="af_province" value="' + esc(a?.province||'') + '" placeholder="Hà Nội"></div>' +
-            '<div class="form-group"><label>Quận / Huyện *</label><input id="af_district" value="' + esc(a?.district||'') + '" placeholder="Cầu Giấy"></div>' +
+            '<div class="form-group"><label>Tỉnh / Thành phố <span style="color:#ef4444">*</span></label>' +
+                buildSelect('af_province', VN_PROVINCES, prov, '-- Chọn tỉnh/thành --', 'addrProvinceChange()') +
+            '</div>' +
+            '<div class="form-group"><label>Quận / Huyện <span style="color:#ef4444">*</span></label>' +
+                buildSelect('af_district', distOpts, dist, '-- Chọn quận/huyện --', 'addrDistrictChange()') +
+            '</div>' +
         '</div>' +
+
+        // Phường/xã + Địa chỉ chi tiết
         '<div class="form-row">' +
-            '<div class="form-group"><label>Phường / Xã *</label><input id="af_ward" value="' + esc(a?.ward||'') + '" placeholder="Dịch Vọng Hậu"></div>' +
-            '<div class="form-group"><label>Số nhà, tên đường *</label><input id="af_detail" value="' + esc(a?.address||'') + '" placeholder="123 Xuân Thủy"></div>' +
+            '<div class="form-group"><label>Phường / Xã <span style="color:#ef4444">*</span></label>' +
+                buildSelect('af_ward', wardOpts, ward, '-- Chọn phường/xã --', '') +
+            '</div>' +
+            '<div class="form-group"><label>Địa chỉ chi tiết <span style="color:#ef4444">*</span></label>' +
+                '<input id="af_detail" value="' + esc(a ? (a.address||'') : '') + '" placeholder="Số nhà, tên đường..." style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;"></div>' +
         '</div>' +
-        '<div style="display:flex;gap:10px;margin-top:4px;">' +
+
+        '<div style="display:flex;gap:10px;margin-top:8px;">' +
             '<button class="btn-sm" onclick="renderAddresses()"><i class="fas fa-arrow-left"></i> Quay lại</button>' +
             '<button class="btn-save" id="btnSaveAddr" style="margin:0;" data-id="' + (id||'') + '">' +
                 '<i class="fas fa-location-dot"></i> ' + (id ? 'Cập nhật' : 'Lưu địa chỉ') +
             '</button>' +
         '</div></div>';
+
+    // Hiển thị form bên dưới danh sách
     document.getElementById('addrContent').innerHTML = html;
     document.getElementById('btnSaveAddr').addEventListener('click', saveAddr);
 };
 
+// Khi đổi tỉnh → cập nhật dropdown quận
+window.addrProvinceChange = function() {
+    var prov = document.getElementById('af_province').value;
+    var dists = prov ? getDistrictsOf(prov) : [];
+    var sel = document.getElementById('af_district');
+    sel.innerHTML = '<option value="">-- Chọn quận/huyện --</option>';
+    dists.forEach(function(d) { sel.innerHTML += '<option value="' + d + '">' + d + '</option>'; });
+    // Reset phường/xã
+    var wardSel = document.getElementById('af_ward');
+    wardSel.innerHTML = '<option value="">-- Chọn phường/xã --</option>';
+};
+
+// Khi đổi quận → cập nhật dropdown phường/xã
+window.addrDistrictChange = function() {
+    var dist = document.getElementById('af_district').value;
+    var wards = dist ? getWardsOf(dist) : [];
+    var sel = document.getElementById('af_ward');
+    sel.innerHTML = '<option value="">-- Chọn phường/xã --</option>';
+    wards.forEach(function(w) { sel.innerHTML += '<option value="' + w + '">' + w + '</option>'; });
+};
+
 function saveAddr() {
     var id   = this.dataset.id;
-    var name = (document.getElementById('af_name')?.value||'').trim();
-    var ph   = (document.getElementById('af_phone')?.value||'').trim();
-    var prov = (document.getElementById('af_province')?.value||'').trim();
-    var dist = (document.getElementById('af_district')?.value||'').trim();
-    var ward = (document.getElementById('af_ward')?.value||'').trim();
-    var det  = (document.getElementById('af_detail')?.value||'').trim();
-    if (!name||!ph||!prov||!dist||!ward||!det) { toast('Vui lòng điền đầy đủ thông tin!', false); return; }
-    var btn = document.getElementById('btnSaveAddr'); btn.disabled=true;
+    var name = (document.getElementById('af_name').value||'').trim();
+    var ph   = (document.getElementById('af_phone').value||'').trim();
+    var prov = (document.getElementById('af_province').value||'').trim();
+    var dist = (document.getElementById('af_district').value||'').trim();
+    var ward = (document.getElementById('af_ward').value||'').trim();
+    var det  = (document.getElementById('af_detail').value||'').trim();
+
+    if (!name) { toast('Vui lòng nhập họ tên!', false); return; }
+    if (!ph)   { toast('Vui lòng nhập số điện thoại!', false); return; }
+    if (!prov) { toast('Vui lòng chọn tỉnh/thành phố!', false); return; }
+    if (!dist) { toast('Vui lòng chọn quận/huyện!', false); return; }
+    if (!ward) { toast('Vui lòng chọn phường/xã!', false); return; }
+    if (!det)  { toast('Vui lòng nhập địa chỉ chi tiết!', false); return; }
+
+    var btn = document.getElementById('btnSaveAddr');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Đang lưu...';
+
     apiPost('../actions/user_action.php', {
-        action: id ? 'update_address' : 'add_address',
-        address_id: id, recipient_name:name, recipient_phone:ph,
-        province:prov, district:dist, ward:ward, address:det
+        action:          id ? 'update_address' : 'add_address',
+        address_id:      id,
+        recipient_name:  name,
+        recipient_phone: ph,
+        province:        prov,
+        district:        dist,
+        ward:            ward,
+        address:         det
     }, function(d) {
-        toast(d.message||(d.success?'Đã lưu!':'Lỗi!'), d.success);
-        if (d.success) loadAddresses();
-        else btn.disabled=false;
+        toast(d.message || (d.success ? 'Đã lưu!' : 'Lỗi không xác định!'), d.success);
+        if (d.success) {
+            loadAddresses();
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-location-dot"></i> ' + (id ? 'Cập nhật' : 'Lưu địa chỉ');
+        }
     });
 }
 

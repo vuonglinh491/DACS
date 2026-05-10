@@ -8,31 +8,37 @@ if (session_status() === PHP_SESSION_NONE) session_start();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sản Phẩm - LKSecure</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="icon" type="image/png" href="../assets/imgs/logo.png">
 </head>
-<body>
+<body class="page-about">
 
-<!-- ===== NAVBAR ===== -->
-<nav class="navbar">
-    <div class="nav-logo">
-        <i class="fas fa-shield-halved"></i>
-        <span>LKSecure</span>
-    </div>
-    <div class="nav-links">
-        <a href="home.php">Trang chủ</a>
-        <a href="products.php">Sản phẩm</a>
-        <a href="about.php" class="active">Giới thiệu</a>
-        <a href="contact.php">Liên hệ</a>
-    </div>
+<!-- NAVBAR -->
+<header class="navbar">
+    <a href="home.php" class="nav-logo">
+        <i class="fa-solid fa-shield-halved"></i> LK Secure
+    </a>
+    <nav class="nav-links">
+        <a href="home.php">TRANG CHỦ</a>
+        <a href="products.php">SẢN PHẨM</a>
+        <a href="about.php" class="active">GIỚI THIỆU</a>
+        <a href="contact.php">LIÊN HỆ</a>
+    </nav>
     <div class="nav-actions">
         <div class="search-box-dynamic">
-            <button class="icon-btn" id="searchToggle" title="Tìm kiếm"><i class="fas fa-search"></i></button>
+            <button class="icon-btn" id="searchToggle" title="Tìm kiếm">
+                <i class="fas fa-search"></i>
+            </button>
             <input type="text" id="navSearchInput" placeholder="Tìm sản phẩm...">
         </div>
-        <button class="icon-btn cart-icon-btn" title="Giỏ hàng"><i class="fas fa-shopping-cart"></i><span class="cart-badge" style="display:none;"></span></button>
+        <button class="icon-btn cart-icon-btn" title="Giỏ hàng">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="cart-badge" style="display:none;"></span>
+        </button>
         <?php include __DIR__ . '/../config/nav_partial.php'; ?>
     </div>
-</nav>
+</header>
 
 <!-- ===== HERO GIỚI THIỆU ===== -->
 <section class="about-hero">
