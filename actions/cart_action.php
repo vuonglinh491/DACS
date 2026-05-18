@@ -2,9 +2,12 @@
 // ============================================================
 //  LKSecure — Xử lý giỏ hàng (yêu cầu đăng nhập)
 // ============================================================
-session_start();
+
+// ✅ ob_start() ngăn PHP warning/notice phá vỡ JSON output
+ob_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth_check.php';
+ob_clean(); // xoá output thừa trước JSON
 header('Content-Type: application/json; charset=utf-8');
 
 if (!isset($_SESSION['user_id'])) {
@@ -112,9 +115,26 @@ if ($action === 'get') {
          WHERE c.user_id = $user_id"
     );
     $items = [];
-    while ($row = $result->fetch_assoc()) $items[] = $row;
+    while ($row = $result->fetch_assoc()) {
+        // ✅ Ép kiểu số rõ ràng — tránh JS nhận string gây lỗi "041"
+        $items[] = [
+            'product_id' => (int)$row['product_id'],
+            'quantity'   => (int)$row['quantity'],
+            'name'       => $row['name'],
+            'price'      => (float)$row['price'],
+            'image'      => $row['image'],
+        ];
+    }
     $total = array_sum(array_map(fn($i) => $i['price'] * $i['quantity'], $items));
-    echo json_encode(['success' => true, 'items' => $items, 'total' => $total]);
+    $cnt   = cartCount($conn, $user_id);
+    echo json_encode(['success' => true, 'items' => $items, 'total' => (float)$total, 'cart_count' => (int)$cnt]);
+    exit;
+}
+
+// ── ĐẾM SỐ LƯỢNG GIỎ HÀNG ─────────────────────────────
+if ($action === 'count') {
+    $cnt = cartCount($conn, $user_id);
+    echo json_encode(['success' => true, 'cart_count' => $cnt]);
     exit;
 }
 

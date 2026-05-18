@@ -424,14 +424,50 @@ document.querySelectorAll('.ptab').forEach(function(tab) {
 
 // ── API helpers ────────────────────────────────────────────
 function apiPost(url, data, cb) {
-    var form = new FormData();
-    Object.keys(data).forEach(function(k) { form.append(k, data[k]); });
-    fetch(url, { method:'POST', body:form }).then(function(r) { return r.json(); }).then(cb)
-    .catch(function() { toast('Lỗi kết nối máy chủ.', false); });
+    // ✅ Dùng URLSearchParams thay FormData để tránh multipart overhead
+    //    và đảm bảo session cookie được gửi đúng
+    var params = new URLSearchParams();
+    Object.keys(data).forEach(function(k) {
+        if (data[k] !== null && data[k] !== undefined) params.append(k, data[k]);
+    });
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+        credentials: 'same-origin'
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+    })
+    .then(function(text) {
+        // Tách JSON ra khỏi bất kỳ PHP warning nào đứng trước
+        var idx = text.indexOf('{');
+        if (idx > 0) { console.warn('[apiPost] PHP output before JSON:', text.substring(0, idx)); text = text.substring(idx); }
+        if (idx < 0) throw new Error('No JSON in response: ' + text.substring(0, 200));
+        cb(JSON.parse(text));
+    })
+    .catch(function(err) {
+        console.error('[apiPost] error:', url, err);
+        toast('Lỗi kết nối máy chủ. Vui lòng thử lại.', false);
+    });
 }
 function apiGet(url, cb) {
-    fetch(url).then(function(r) { return r.json(); }).then(cb)
-    .catch(function() { toast('Lỗi kết nối máy chủ.', false); });
+    fetch(url, { credentials: 'same-origin' })
+    .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+    })
+    .then(function(text) {
+        var idx = text.indexOf('{');
+        if (idx > 0) { console.warn('[apiGet] PHP output before JSON:', text.substring(0, idx)); text = text.substring(idx); }
+        if (idx < 0) throw new Error('No JSON in response');
+        cb(JSON.parse(text));
+    })
+    .catch(function(err) {
+        console.error('[apiGet] error:', url, err);
+        toast('Lỗi kết nối máy chủ. Vui lòng thử lại.', false);
+    });
 }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -455,10 +491,36 @@ document.getElementById('btnSaveInfo').addEventListener('click', function() {
     if (!name) { toast('Họ tên không được để trống!', false); return; }
     var btn = this; btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Đang lưu...';
-    var postData = { action:'update_profile', full_name:name, phone:phone, email:email };
-    if (file) postData['avatar'] = file;
-    apiPost('../actions/user_action.php', postData, function(d) {
+
+    // ✅ Nếu có file avatar → dùng FormData (multipart)
+    //    Nếu không → dùng URLSearchParams (đơn giản, không lỗi session)
+    var fetchOpts;
+    if (file) {
+        var fd = new FormData();
+        fd.append('action', 'update_profile');
+        fd.append('full_name', name);
+        fd.append('phone', phone);
+        fd.append('email', email);
+        fd.append('avatar', file);
+        fetchOpts = { method: 'POST', body: fd, credentials: 'same-origin' };
+    } else {
+        var p = new URLSearchParams({ action:'update_profile', full_name:name, phone:phone, email:email });
+        fetchOpts = { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:p.toString(), credentials:'same-origin' };
+    }
+
+    fetch('../actions/user_action.php', fetchOpts)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+        var idx = text.indexOf('{'); if (idx > 0) text = text.substring(idx);
+        var d = JSON.parse(text);
         toast(d.message || (d.success ? 'Đã lưu!' : 'Lỗi!'), d.success);
+        if (d.success && d.full_name) {
+            var el = document.getElementById('navUserName');
+            if (el) el.textContent = d.full_name;
+        }
+    })
+    .catch(function(err) { console.error(err); toast('Lỗi kết nối máy chủ.', false); })
+    .finally(function() {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Lưu thay đổi';
     });
@@ -651,39 +713,82 @@ window.addrDistrictChange = function() {
 };
 
 function saveAddr() {
-    var id   = this.dataset.id;
-    var name = (document.getElementById('af_name').value||'').trim();
-    var ph   = (document.getElementById('af_phone').value||'').trim();
-    var prov = (document.getElementById('af_province').value||'').trim();
-    var dist = (document.getElementById('af_district').value||'').trim();
-    var ward = (document.getElementById('af_ward').value||'').trim();
-    var det  = (document.getElementById('af_detail').value||'').trim();
+    // ✅ Fix: đọc id từ element trực tiếp, không dùng `this`
+    var btn  = document.getElementById('btnSaveAddr');
+    var id   = btn ? (btn.dataset.id || '') : '';
 
-    if (!name) { toast('Vui lòng nhập họ tên!', false); return; }
+    var name = (document.getElementById('af_name')     ? document.getElementById('af_name').value     : '').trim();
+    var ph   = (document.getElementById('af_phone')    ? document.getElementById('af_phone').value    : '').trim();
+    var prov = (document.getElementById('af_province') ? document.getElementById('af_province').value : '').trim();
+    var dist = (document.getElementById('af_district') ? document.getElementById('af_district').value : '').trim();
+    var ward = (document.getElementById('af_ward')     ? document.getElementById('af_ward').value     : '').trim();
+    var det  = (document.getElementById('af_detail')   ? document.getElementById('af_detail').value   : '').trim();
+
+    if (!name) { toast('Vui lòng nhập họ tên người nhận!', false); return; }
     if (!ph)   { toast('Vui lòng nhập số điện thoại!', false); return; }
+    if (ph && !/^(0[35789])[0-9]{8}$/.test(ph.replace(/\s/g,''))) {
+        toast('Số điện thoại không hợp lệ (VD: 0912345678)', false); return;
+    }
     if (!prov) { toast('Vui lòng chọn tỉnh/thành phố!', false); return; }
     if (!dist) { toast('Vui lòng chọn quận/huyện!', false); return; }
     if (!ward) { toast('Vui lòng chọn phường/xã!', false); return; }
     if (!det)  { toast('Vui lòng nhập địa chỉ chi tiết!', false); return; }
 
-    var btn = document.getElementById('btnSaveAddr');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Đang lưu...';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Đang lưu...';
+    }
 
-    apiPost('../actions/user_action.php', {
+    var postData = {
         action:          id ? 'update_address' : 'add_address',
         address_id:      id,
         recipient_name:  name,
-        recipient_phone: ph,
+        recipient_phone: ph.replace(/\s/g,''),
         province:        prov,
         district:        dist,
         ward:            ward,
         address:         det
-    }, function(d) {
-        toast(d.message || (d.success ? 'Đã lưu!' : 'Lỗi không xác định!'), d.success);
+    };
+
+    // ✅ Dùng fetch thẳng với URLSearchParams để tránh lỗi FormData + session
+    var params = new URLSearchParams();
+    Object.keys(postData).forEach(function(k) { params.append(k, postData[k]); });
+
+    fetch('../actions/user_action.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+        credentials: 'same-origin'
+    })
+    .then(function(r) {
+        // ✅ Kiểm tra HTTP status trước
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+    })
+    .then(function(text) {
+        // ✅ Tách JSON ra khỏi bất kỳ PHP warning/notice nào ở đầu
+        var jsonStart = text.indexOf('{');
+        if (jsonStart > 0) {
+            console.warn('PHP warning before JSON:', text.substring(0, jsonStart));
+            text = text.substring(jsonStart);
+        }
+        var d = JSON.parse(text);
+        toast(d.message || (d.success ? 'Đã lưu địa chỉ!' : 'Lỗi không xác định!'), d.success);
         if (d.success) {
             loadAddresses();
+        } else if (d.require_login) {
+            window.location.href = 'login.php?redirect_to=profile.php';
         } else {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-location-dot"></i> ' + (id ? 'Cập nhật' : 'Lưu địa chỉ');
+            }
+        }
+    })
+    .catch(function(err) {
+        console.error('saveAddr error:', err);
+        toast('Lỗi kết nối máy chủ. Vui lòng thử lại.', false);
+        if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-location-dot"></i> ' + (id ? 'Cập nhật' : 'Lưu địa chỉ');
         }

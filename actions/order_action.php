@@ -4,9 +4,12 @@
 //  Điều kiện hủy: chỉ khi status = pending | confirmed
 //  KHÔNG cho hủy khi: shipping | delivered | cancelled
 // ============================================================
-session_start();
+
+// ✅ ob_start() ngăn PHP warning/notice phá vỡ JSON output
+ob_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth_check.php';
+ob_clean(); // xoá output thừa trước JSON
 header('Content-Type: application/json; charset=utf-8');
 
 requireLogin(true); // JSON mode
@@ -114,6 +117,128 @@ if ($action === 'cancel' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['success' => true, 'message' => 'Đã hủy đơn hàng thành công.']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Không thể hủy đơn hàng này.']);
+    }
+    exit;
+}
+
+// ── ĐẶT HÀNG MỚI (checkout) ───────────────────────────────
+if ($action === 'place' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $ship_name    = trim($_POST['ship_name']    ?? '');
+    $ship_phone   = trim($_POST['ship_phone']   ?? '');
+    $ship_address = trim($_POST['ship_address'] ?? '');
+    $note         = trim($_POST['note']         ?? '');
+    $pay_method   = $_POST['payment_method']    ?? 'cod';
+
+    if (!$ship_name || !$ship_phone || !$ship_address) {
+        echo json_encode(['success' => false, 'message' => 'Vui lòng điền đầy đủ thông tin giao hàng.']);
+        exit;
+    }
+    if (!preg_match('/^(0[35789])([0-9]{8})$/', $ship_phone)) {
+        echo json_encode(['success' => false, 'message' => 'Số điện thoại không hợp lệ.']);
+        exit;
+    }
+    $allowed_pay = ['cod', 'bank_transfer', 'momo', 'vnpay'];
+    if (!in_array($pay_method, $allowed_pay)) $pay_method = 'cod';
+
+    // Lấy giỏ hàng
+    $cartRes = $conn->prepare(
+        "SELECT c.product_id, c.quantity, p.name, p.price, p.image, p.stock, p.status
+         FROM cart c
+         JOIN products p ON c.product_id = p.id
+         WHERE c.user_id = ?"
+    );
+    $cartRes->bind_param("i", $user_id);
+    $cartRes->execute();
+    $cartItems = $cartRes->get_result()->fetch_all(MYSQLI_ASSOC);
+    $cartRes->close();
+
+    if (empty($cartItems)) {
+        echo json_encode(['success' => false, 'message' => 'Giỏ hàng trống.']);
+        exit;
+    }
+
+    // Kiểm tra tồn kho
+    foreach ($cartItems as $item) {
+        if ($item['status'] !== 'active' || $item['stock'] < $item['quantity']) {
+            echo json_encode(['success' => false, 'message' => "Sản phẩm \"{$item['name']}\" không đủ hàng."]);
+            exit;
+        }
+    }
+
+    $subtotal = 0;
+    foreach ($cartItems as $item) {
+        $subtotal += $item['price'] * $item['quantity'];
+    }
+    $shipping_fee = $subtotal >= 5000000 ? 0 : 30000;
+    $total = $subtotal + $shipping_fee;
+
+    // Tạo mã đơn hàng
+    $order_code = 'LKS-' . date('Y') . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
+
+    // Bắt đầu transaction
+    $conn->begin_transaction();
+    try {
+        // Tạo đơn hàng
+        $stmt = $conn->prepare(
+            "INSERT INTO orders (user_id, order_code, ship_name, ship_phone, ship_address, note,
+             subtotal, discount, shipping_fee, total, payment_method, payment_status, status, ordered_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'unpaid', 'pending', NOW())"
+        );
+        $stmt->bind_param("isssssdds s",
+            $user_id, $order_code, $ship_name, $ship_phone, $ship_address, $note,
+            $subtotal, $shipping_fee, $total, $pay_method
+        );
+        // Dùng bind manual vì mixed types
+        $stmt->close();
+
+        $orderStmt = $conn->prepare(
+            "INSERT INTO orders
+             (user_id, order_code, ship_name, ship_phone, ship_address, note,
+              subtotal, shipping_fee, total, payment_method, payment_status, status, ordered_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'pending', NOW())"
+        );
+        $orderStmt->bind_param("isssssddds",
+            $user_id, $order_code, $ship_name, $ship_phone, $ship_address, $note,
+            $subtotal, $shipping_fee, $total, $pay_method
+        );
+        $orderStmt->execute();
+        $order_id = $conn->insert_id;
+        $orderStmt->close();
+
+        // Lưu từng order_item & giảm stock
+        $itemStmt = $conn->prepare(
+            "INSERT INTO order_items (order_id, user_id, product_id, product_name, product_image, unit_price, quantity, line_total)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        $stockStmt = $conn->prepare("UPDATE products SET stock = stock - ?, sold_count = sold_count + ? WHERE id = ?");
+
+        foreach ($cartItems as $item) {
+            $line = $item['price'] * $item['quantity'];
+            $itemStmt->bind_param("iiissdid",
+                $order_id, $user_id, $item['product_id'],
+                $item['name'], $item['image'],
+                $item['price'], $item['quantity'], $line
+            );
+            $itemStmt->execute();
+
+            $stockStmt->bind_param("iii", $item['quantity'], $item['quantity'], $item['product_id']);
+            $stockStmt->execute();
+        }
+        $itemStmt->close();
+        $stockStmt->close();
+
+        // Xóa giỏ hàng
+        $clearStmt = $conn->prepare("DELETE FROM cart WHERE user_id = ?");
+        $clearStmt->bind_param("i", $user_id);
+        $clearStmt->execute();
+        $clearStmt->close();
+
+        $conn->commit();
+        echo json_encode(['success' => true, 'order_code' => $order_code, 'order_id' => $order_id, 'message' => 'Đặt hàng thành công!']);
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => 'Lỗi hệ thống: ' . $e->getMessage()]);
     }
     exit;
 }

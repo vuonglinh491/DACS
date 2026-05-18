@@ -2,8 +2,11 @@
 // ============================================================
 //  LKSecure — Thêm / Xóa sản phẩm (dùng bởi admin panel)
 // ============================================================
-session_start();
+
+// ✅ ob_start() ngăn PHP warning/notice phá vỡ JSON output
+ob_start();
 require_once __DIR__ . '/../config/database.php';
+ob_clean(); // xoá output thừa trước JSON
 header('Content-Type: application/json; charset=utf-8');
 
 // Chỉ admin mới được phép

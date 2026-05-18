@@ -292,37 +292,64 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Submit form thêm sản phẩm
+    // Submit form thêm sản phẩm — GỌI API THẬT
     if (addProductForm) {
         addProductForm.addEventListener('submit', function (e) {
             e.preventDefault();
 
-            // Validate
-            const name  = document.getElementById('productName')?.value.trim();
-            const price = document.getElementById('productPrice')?.value.trim();
-            const stock = document.getElementById('productStock')?.value.trim();
+            const name     = document.getElementById('productName')?.value.trim();
+            const catId    = document.getElementById('productCategory')?.value;
+            const price    = document.getElementById('productPrice')?.dataset.rawValue
+                          || document.getElementById('productPrice')?.value.replace(/[^0-9]/g,'');
+            const stock    = document.getElementById('productStock')?.value.trim();
 
             if (!name || !price || !stock) {
                 showToast('Vui lòng điền đủ thông tin bắt buộc!', 'error');
                 return;
             }
 
-            // Simulate save
             const btn = this.querySelector('[type="submit"]');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
-            }
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...'; }
 
-            setTimeout(function () {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-check"></i> Lưu sản phẩm';
+            // Collect spec rows
+            const specNames  = [];
+            const specValues = [];
+            document.querySelectorAll('#specsBody tr').forEach(function(row) {
+                const inputs = row.querySelectorAll('input');
+                if (inputs[0]?.value.trim() && inputs[1]?.value.trim()) {
+                    specNames.push(inputs[0].value.trim());
+                    specValues.push(inputs[1].value.trim());
                 }
-                showToast('Đã thêm sản phẩm thành công!', 'success');
-                addProductForm.reset();
-                if (previewGrid) previewGrid.innerHTML = '';
-            }, 1200);
+            });
+
+            const formData = new FormData(addProductForm);
+            formData.set('action', 'add');
+            formData.set('name', name);
+            if (catId) formData.set('category_id', catId);
+            formData.set('price', price);
+            formData.set('stock', stock);
+            specNames.forEach((v,i)  => formData.append('spec_name[]',  v));
+            specValues.forEach((v,i) => formData.append('spec_value[]', v));
+
+            fetch('../actions/products_action.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(function(data) {
+                if (data.success) {
+                    showToast('Đã thêm sản phẩm thành công!', 'success');
+                    addProductForm.reset();
+                    if (previewGrid) previewGrid.innerHTML = '';
+                    if (specsBody) specsBody.innerHTML = '';
+                } else {
+                    showToast(data.message || 'Lỗi khi thêm sản phẩm.', 'error');
+                }
+            })
+            .catch(function() { showToast('Lỗi kết nối.', 'error'); })
+            .finally(function() {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Lưu sản phẩm'; }
+            });
         });
     }
 
@@ -365,30 +392,53 @@ document.addEventListener('DOMContentLoaded', function () {
             openModal('orderDetailModal');
         }
 
-        // Cập nhật trạng thái đơn hàng
+        // Cập nhật trạng thái đơn hàng — GỌI API THẬT
         if (e.target.closest('.btn-update-status')) {
             const btn    = e.target.closest('.btn-update-status');
             const select = btn.previousElementSibling;
             if (!select) return;
 
             const newStatus = select.value;
-            const row = btn.closest('tr');
-            const badge = row?.querySelector('.status-badge');
+            const row       = btn.closest('tr');
+            const orderId   = btn.dataset.id || row?.dataset.id;
 
-            const statusMap = {
-                pending:    { label: 'Chờ xử lý',    cls: 'pending' },
-                processing: { label: 'Đang xử lý',   cls: 'processing' },
-                shipping:   { label: 'Đang giao',     cls: 'shipping' },
-                delivered:  { label: 'Đã giao',       cls: 'delivered' },
-                cancelled:  { label: 'Đã hủy',        cls: 'cancelled' }
-            };
+            if (!orderId) { showToast('Không xác định được đơn hàng.', 'error'); return; }
 
-            if (badge && statusMap[newStatus]) {
-                badge.className = `status-badge ${statusMap[newStatus].cls}`;
-                badge.dataset.status = newStatus;
-                badge.textContent = statusMap[newStatus].label;
-                showToast(`Đã cập nhật đơn hàng sang: ${statusMap[newStatus].label}`, 'success');
-            }
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            fetch('../actions/admin_order_action.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'action=update_status&order_id=' + orderId + '&status=' + newStatus
+            })
+            .then(r => r.json())
+            .then(function(data) {
+                if (data.success) {
+                    const statusMap = {
+                        pending:    { label: 'Chờ xử lý',   cls: 'pending' },
+                        confirmed:  { label: 'Xác nhận',    cls: 'processing' },
+                        processing: { label: 'Đang xử lý',  cls: 'processing' },
+                        shipping:   { label: 'Đang giao',   cls: 'shipping' },
+                        delivered:  { label: 'Đã giao',     cls: 'delivered' },
+                        cancelled:  { label: 'Đã hủy',      cls: 'cancelled' }
+                    };
+                    const badge = row?.querySelector('.status-badge');
+                    if (badge && statusMap[newStatus]) {
+                        badge.className = 'status-badge ' + statusMap[newStatus].cls;
+                        badge.dataset.status = newStatus;
+                        badge.textContent = statusMap[newStatus].label;
+                    }
+                    showToast('Đã cập nhật trạng thái đơn hàng!', 'success');
+                } else {
+                    showToast(data.message || 'Lỗi cập nhật.', 'error');
+                }
+            })
+            .catch(function() { showToast('Lỗi kết nối.', 'error'); })
+            .finally(function() {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Cập nhật';
+            });
         }
     });
 

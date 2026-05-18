@@ -2948,3 +2948,240 @@ textarea.cf-input { resize: vertical; min-height: 130px; padding-top: 12px; }
     border-color: #f59e0b !important;
     box-shadow: 0 0 0 3px rgba(245,158,11,0.15) !important;
 }
+
+/* ============================================================
+   ADDRESS SELECT — Dropdown tỉnh / huyện / xã
+   ============================================================ */
+.lk-select-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.lk-select-wrap > i {
+    position: absolute;
+    left: 14px;
+    font-size: 13px;
+    color: rgba(255,255,255,.4);
+    pointer-events: none;
+    z-index: 1;
+}
+.lk-select {
+    width: 100%;
+    padding: 10px 36px 10px 38px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color .25s, background .25s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23aaa' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+}
+.lk-select option {
+    background: #1e1b4b;
+    color: #e2e8f0;
+}
+.lk-select:focus {
+    border-color: rgba(168,85,247,.6);
+    background-color: rgba(255,255,255,.1);
+}
+.lk-select:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   PRODUCT CARD ENHANCEMENTS — thêm vào cuối main.css
+   ============================================================ */
+
+/* Card bọc ngoài cần relative để badge hiện đúng */
+.product-item-box {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+/* Badge nổi bật / giảm giá */
+.product-badge-featured {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    z-index: 2;
+    letter-spacing: .3px;
+}
+
+.product-badge-sale {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    z-index: 2;
+}
+
+/* Link ảnh */
+.product-img-link {
+    display: block;
+    width: 100%;
+    height: 190px;
+    overflow: hidden;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    background: #f8fafc;
+}
+
+.product-img-link img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+    transition: transform .35s ease;
+    margin: 0;
+    border-radius: 0;
+}
+
+.product-item-box:hover .product-img-link img {
+    transform: scale(1.06);
+}
+
+/* No image placeholder */
+.no-product-img {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    color: #d1d5db;
+}
+
+/* Info block */
+.product-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.product-item-cat {
+    font-size: 11px;
+    font-weight: 600;
+    color: #7c3aed;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+.product-item-box h5 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-price-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.price-tag {
+    display: inline;
+    font-size: 18px;
+    font-weight: 800;
+    color: #4f46e5;
+    margin: 0;
+}
+
+.price-orig {
+    font-size: 13px;
+    color: #9ca3af;
+    text-decoration: line-through;
+}
+
+.sold-count {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.sold-count i {
+    color: #f59e0b;
+}
+
+/* Filter sidebar — active state */
+.selectable-list li {
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    transition: background .15s;
+}
+.selectable-list li:hover { background: rgba(168,85,247,.08); }
+.selectable-list li.active { background: rgba(168,85,247,.12); color: #7c3aed; font-weight: 600; }
+
+/* Category strip active */
+.cat-item {
+    padding: 8px 18px;
+    border-radius: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    transition: all .2s;
+    white-space: nowrap;
+}
+.cat-item:hover { border-color: #a5b4fc; background: #f5f3ff; }
+.cat-item.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+
+/* Product grid layout fix */
+.product-grid-main {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+/* Category strip */
+.category-strip {
+    background: #fff;
+    border-bottom: 1px solid #f3f4f6;
+    padding: 16px 0;
+    position: sticky;
+    top: 70px;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.cat-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 0 20px;
+}
+
+/* Search results highlight */
+.product-item-box[style*="display:none"] { display: none !important; }
+

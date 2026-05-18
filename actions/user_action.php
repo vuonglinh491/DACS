@@ -2,9 +2,17 @@
 // ============================================================
 //  LKSecure — Xử lý thông tin cá nhân & địa chỉ người dùng
 // ============================================================
-session_start();
+// ✅ ob_start() PHẢI là dòng đầu tiên — bắt mọi PHP warning/notice
+//    không cho chúng phá vỡ JSON response
+ob_start();
+
+// auth_check.php đã gọi session_start() bên trong nó rồi
+// KHÔNG gọi session_start() ở đây nữa
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth_check.php';
+
+// Xoá bỏ mọi output thừa (PHP notices/warnings) trước khi set header
+ob_clean();
 header('Content-Type: application/json; charset=utf-8');
 
 requireLogin(true);

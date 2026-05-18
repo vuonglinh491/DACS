@@ -2,8 +2,11 @@
 // ============================================================
 //  LKSecure — Xử lý theo dõi & hủy đơn hàng
 // ============================================================
-session_start();
+
+// ✅ ob_start() ngăn PHP warning/notice phá vỡ JSON output
+ob_start();
 require_once __DIR__ . '/../config/database.php';
+ob_clean(); // xoá output thừa trước JSON
 header('Content-Type: application/json; charset=utf-8');
 
 if (!isset($_SESSION['user_id'])) {
