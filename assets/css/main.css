@@ -3179,9 +3179,9 @@ textarea.cf-input { resize: vertical; min-height: 130px; padding-top: 12px; }
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    justify-content: center;
     padding: 0 20px;
 }
 
 /* Search results highlight */
 .product-item-box[style*="display:none"] { display: none !important; }
-

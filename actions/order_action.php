@@ -178,50 +178,57 @@ if ($action === 'place' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     // Bắt đầu transaction
     $conn->begin_transaction();
     try {
-        // Tạo đơn hàng
-        $stmt = $conn->prepare(
-            "INSERT INTO orders (user_id, order_code, ship_name, ship_phone, ship_address, note,
-             subtotal, discount, shipping_fee, total, payment_method, payment_status, status, ordered_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'unpaid', 'pending', NOW())"
-        );
-        $stmt->bind_param("isssssdds s",
-            $user_id, $order_code, $ship_name, $ship_phone, $ship_address, $note,
-            $subtotal, $shipping_fee, $total, $pay_method
-        );
-        // Dùng bind manual vì mixed types
-        $stmt->close();
-
+        // ✅ Tạo đơn hàng — bind_param đúng kiểu: i=int, s=string, d=decimal
         $orderStmt = $conn->prepare(
             "INSERT INTO orders
              (user_id, order_code, ship_name, ship_phone, ship_address, note,
-              subtotal, shipping_fee, total, payment_method, payment_status, status, ordered_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'pending', NOW())"
+              subtotal, discount, shipping_fee, total, payment_method, payment_status, status, ordered_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'unpaid', 'pending', NOW())"
         );
         $orderStmt->bind_param("isssssddds",
-            $user_id, $order_code, $ship_name, $ship_phone, $ship_address, $note,
-            $subtotal, $shipping_fee, $total, $pay_method
+            $user_id,      // i
+            $order_code,   // s
+            $ship_name,    // s
+            $ship_phone,   // s
+            $ship_address, // s
+            $note,         // s
+            $subtotal,     // d
+            $shipping_fee, // d
+            $total,        // d
+            $pay_method    // s
         );
-        $orderStmt->execute();
+        if (!$orderStmt->execute()) {
+            throw new Exception('Lỗi INSERT orders: ' . $orderStmt->error);
+        }
         $order_id = $conn->insert_id;
         $orderStmt->close();
 
-        // Lưu từng order_item & giảm stock
+        // ✅ Lưu order_items — bind_param: i,i,i,s,s,d,i,d
         $itemStmt = $conn->prepare(
-            "INSERT INTO order_items (order_id, user_id, product_id, product_name, product_image, unit_price, quantity, line_total)
+            "INSERT INTO order_items
+             (order_id, user_id, product_id, product_name, product_image, unit_price, quantity, line_total)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        $stockStmt = $conn->prepare("UPDATE products SET stock = stock - ?, sold_count = sold_count + ? WHERE id = ?");
+        $stockStmt = $conn->prepare(
+            "UPDATE products SET stock = GREATEST(0, stock - ?), sold_count = sold_count + ? WHERE id = ?"
+        );
 
         foreach ($cartItems as $item) {
-            $line = $item['price'] * $item['quantity'];
-            $itemStmt->bind_param("iiissdid",
-                $order_id, $user_id, $item['product_id'],
-                $item['name'], $item['image'],
-                $item['price'], $item['quantity'], $line
-            );
-            $itemStmt->execute();
+            $pid   = (int)$item['product_id'];
+            $qty   = (int)$item['quantity'];
+            $price = (float)$item['price'];
+            $img   = $item['image'] ?? '';
+            $name  = $item['name'];
+            $line  = $price * $qty;
 
-            $stockStmt->bind_param("iii", $item['quantity'], $item['quantity'], $item['product_id']);
+            $itemStmt->bind_param("iiissdid",
+                $order_id, $user_id, $pid, $name, $img, $price, $qty, $line
+            );
+            if (!$itemStmt->execute()) {
+                throw new Exception('Lỗi INSERT order_items: ' . $itemStmt->error);
+            }
+
+            $stockStmt->bind_param("iii", $qty, $qty, $pid);
             $stockStmt->execute();
         }
         $itemStmt->close();
